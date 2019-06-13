@@ -16,37 +16,32 @@ void processChildren(json& childrenJson, const NxsSimpleNode *parent) {
     }
 }
 
-int main(int argc, char** argv) {
-    if (argc < 2) {
-        std::cout << "Usage: " << argv[0] << " file.nex" << std::endl;
-        return 1;
-    }
-
+int main() {
     MultiFormatReader nexusReader(-1, NxsReader::IGNORE_WARNINGS);
-    nexusReader.ReadFilepath(argv[1], MultiFormatReader::NEXUS_FORMAT);
+    nexusReader.ReadStream(std::cin, MultiFormatReader::NEXUS_FORMAT);
 
-    json phyjson;
+    json pyjson;
 
-    phyjson["format"] = "phyjson";
-    phyjson["version"] = "1.0";
-    phyjson["taxa"] = json::array();
-    phyjson["trees"] = json::array();
+    pyjson["format"] = "phyjson";
+    pyjson["version"] = "1.0";
+    pyjson["taxa"] = json::array();
+    pyjson["trees"] = json::array();
 
     const unsigned numTaxaBlocks = nexusReader.GetNumTaxaBlocks();
 
     if (numTaxaBlocks > 1) {
-        std::cerr << "Warning: Nexus2phyjson can only handle one taxa block, ignoring remaining blocks" << std::endl;
+        std::cerr << "Warning: Nexus2PyJSON can only handle one taxa block, ignoring remaining blocks" << std::endl;
     }
 
     if (numTaxaBlocks > 0) {
         NxsTaxaBlock *taxaBlock = nexusReader.GetTaxaBlock(0);
         for (unsigned i = 0; i < taxaBlock->GetNTaxTotal(); i++) {
-            phyjson["taxa"] += {{"id", i}, {"name", taxaBlock->GetTaxonLabel(i)}};
+            pyjson["taxa"] += {{"id", i}, {"name", taxaBlock->GetTaxonLabel(i)}};
         }
 
         const unsigned numTreesBlocks = nexusReader.GetNumTreesBlocks(taxaBlock);
         if (numTreesBlocks > 1) {
-            std::cerr << "Warning: Nexus2phyjson can only handle one trees block, ignoring remaining blocks" << std::endl;
+            std::cerr << "Warning: Nexus2PyJSON can only handle one trees block, ignoring remaining blocks" << std::endl;
         }
         if (numTreesBlocks > 0) {
             NxsTreesBlock *treesBlock = nexusReader.GetTreesBlock(taxaBlock, 0);
@@ -59,10 +54,10 @@ int main(int argc, char** argv) {
                 treeJson["root"]["branch_length"] = tree.GetRootConst()->GetEdgeToParent().GetDblEdgeLen();
                 treeJson["root"]["children"] = json::array();
                 processChildren(treeJson["root"]["children"], tree.GetRootConst());
-                phyjson["trees"] += treeJson;
+                pyjson["trees"] += treeJson;
             }
         }
     }
 
-    std::cout << phyjson.dump(4) << std::endl;
+    std::cout << pyjson.dump(4) << std::endl;
 }
